@@ -1,0 +1,265 @@
+---
+title: "Cellbased_Meat"
+output: html_document
+date: "2023-10-24"
+---
+
+```{r}
+#how i want to look at it:
+
+#Demographics:
+#type of profession and view on meats
+#age group and how much they want the meat
+#age group and profession
+
+#Possible motivations:
+#how many people eat it because they want to reduce meat
+#close friends and being a flexi/vege
+
+#Current view on current meats
+#fear across different meats
+#current attitude vs future solution. Do people believe we can improve?
+
+
+
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+load("Meat.rdata")
+```
+
+
+```{r}
+str(Meat)
+glimpse(Meat)
+
+summary(Meat$Liking)
+
+Meat$Liking = Meat$Liking - 5
+```
+
+```{r}
+dim(Meat)
+summary(Meat)
+```
+
+```{r}
+summary(Meat$Gender) 
+summary(Meat$Age) 
+summary(Meat$Stimuli)
+```
+
+```{r}
+view(Meat)
+```
+
+```{r}
+summary(Meat$Disgust)
+```
+```{r}
+
+library(dplyr)
+summary(Meat$Stimuli)
+
+Meat %>%
+  group_by(Stimuli)%>%
+  summarize(mean(Disgust),
+             sd(Disgust))
+
+Meat %>%
+  group_by(Stimuli)%>%
+  summarize(mean(Attitude),
+             sd(Attitude))
+
+```
+#-------------------------
+
+
+#Chi square test for guilt
+```{r}
+#Shows Guilt
+table(Meat$Guilt)
+chisq.test(table(Meat$Guilt))
+
+#shows correlation between gender and fear
+#taking out other in gender field
+#Meat <- Meat[-which(Meat$Gender=="Other"),]
+table(Meat$Gender)
+table(Meat$Gender,Meat$Fear)
+chisq.test(table(Meat$Gender,Meat$Fear))
+
+#or use this to include only men and women
+#MeatGender <- Meat[Meat$Gender %in% c("Men","Women"),]
+#MeatGender
+
+
+```
+
+#T-test for guilt
+```{r}
+
+guilt_male <- subset(Meat, Gender == "Men", select = Guilt)
+#guilt_male
+
+guilt_female <- subset(Meat, Gender == "Women", select = Guilt)
+#guilt_female
+
+t_test_result <- t.test(guilt_male, guilt_female)
+
+print(t_test_result)
+
+#we see that its not significant as the limits range goes over 0
+
+#library(lattice)
+
+#bwplot(Meat$Guilt ~ guilt_male)
+```
+#Anova
+```{r}
+# Run an ANOVA
+result <- aov(Guilt ~ Diet, data = Meat)
+
+# Summary of the ANOVA
+summary(result)
+
+meat.aov.own <-aov(Guilt ~ Diet, data = Meat)
+anova(meat.aov.own)
+
+```
+#Regression
+```{r}
+
+model_guilt <- lm(Meat$Guilt ~ Meat$Satisfaction)
+
+summary(model_guilt)
+
+ggplot(Meat, aes(x = Satisfaction, y = Guilt)) + 
+  geom_point(aes(color = Satisfaction), alpha = 0.6) + 
+  geom_smooth(method = "lm", se = TRUE, color = "blue") + 
+  labs(x = "Satisfaction", y = "Guilt", title = "Linear Regression of Guilt on Satisfaction") +
+  theme_minimal()
+  geom_smooth(method = "lm", se = FALSE)
+  
+
+```
+
+#mediation
+```{r}
+
+Meat$Satisfaction <- as.numeric(Meat$Satisfaction)
+Meat$Guilt <- as.numeric(Meat$Guilt)
+Meat$Stimuli <- as.numeric(Meat$Stimuli)
+
+process(data = Meat, y = "Satisfaction", x = "Stimuli", m ="Guilt", model = 4)
+
+
+```
+#Plot1
+```{r}
+
+ggplot(data = Meat, aes(x = Guilt, y = Satisfaction, color = Gender)) + 
+  geom_point() +
+  labs(
+    title = "Scatter plot of Guilt and Satisfaction by Gender",
+    x = "Guilt",
+    y = "Satisfaction",
+    color = "Gender"
+  ) +
+  geom_smooth(method = "lm", se = FALSE) + 
+  scale_color_brewer(palette = "Set2") 
+
+```
+#Plot2
+```{r}
+library(coefplot)
+
+food_Rating <-lm(Liking ~ Purchase + NegativeEmotions +
+    + PositiveEmotions
+    + Liking ,
+    data = Meat
+  )
+
+#summary(food_Rating)
+
+coefplot(food_Rating, intercept = FALSE, outerCI = 1.96, lwdOuter = 1.5,
+         ylab = "rating of feature",
+         xlab = "Association with Liking")
+```
+#plot2
+```{r}
+# Assuming the 'Stimuli' column is already a factor with levels 'vegetal', 'cultivated', and 'insects'.
+# If not, you should convert it using Meat$Stimuli <- factor(Meat$Stimuli, levels = c('vegetal', 'cultivated', 'insects'))
+
+model_guilt <- lm(Guilt ~ Satisfaction, data = Meat)
+
+summary(model_guilt)
+
+ggplot(Meat, aes(x = Satisfaction, y = Guilt)) + 
+  geom_point(aes(color = Satisfaction), alpha = 0.6) + 
+  geom_smooth(method = "lm", se = TRUE, color = "blue") + 
+  labs(x = "Satisfaction", y = "Guilt", title = "Linear Regression of Guilt on Satisfaction by Stimuli") +
+  theme_minimal() +
+  geom_smooth(method = "lm", se = FALSE) + # Remove the previously added geom_smooth with SE
+  facet_wrap(~ Stimuli) # Add this line to create separate plots for each stimulus
+
+
+```
+```{r}
+ggplot(Meat, aes(x = Satisfaction, y = Guilt)) + 
+  geom_point(aes(color = Satisfaction), alpha = 0.6) + 
+  geom_smooth(method = "lm", se = TRUE, color = "blue") + 
+  labs(x = "Satisfaction", y = "Guilt", title = "Linear Regression of Guilt on Satisfaction by Stimuli") +
+  theme_minimal() +
+  facet_wrap(~ Stimuli, ncol = 1, scales = "free") # Add the facet_wrap to create a separate plot for each stimulus
+
+```
+
+
+
+```{r}
+ggplot(data = Meat, aes(x = Guilt, y = Satisfaction, color = Gender)) + 
+  geom_point() +
+  labs(
+    title = "Scatter plot of Guilt and Satisfaction by Gender for each Stimulus",
+    x = "Guilt",
+    y = "Satisfaction",
+    color = "Gender"
+  ) +
+  geom_smooth(method = "lm", se = FALSE) + 
+  scale_color_brewer(palette = "Set2") +
+  facet_wrap(~Stimuli)
+```
+```{r}
+ggplot(data = Meat, aes(x = Satisfaction, y = Guilt, color = Gender)) + 
+  geom_point() +
+  labs(
+    title = "Scatter plot of Satisfaction and Guilt by Gender for each Stimulus",
+    x = "Satisfaction",
+    y = "Guilt",
+    color = "Gender"
+  ) +
+  geom_smooth(method = "lm", se = FALSE) + 
+  scale_color_brewer(palette = "Set2") +
+  facet_wrap(~Stimuli) # Creates separate plots for each type of stimulus
+```
+```{r}
+library(ggplot2)
+ggplot(data = Meat, aes(x = Satisfaction, y = Disgust, color = Gender)) + 
+  geom_point() +
+  labs(
+    title = "Scatter plot of Satisfaction and Disgust by Gender for each Stimulus",
+    x = "Satisfaction",
+    y = "Disgust",
+    color = "Gender"
+  ) +
+  geom_smooth(method = "lm", se = FALSE) + 
+  scale_color_brewer(palette = "Set2") +
+  facet_wrap(~Stimuli) # Creates separate plots for each type of stimulus
+```
+
